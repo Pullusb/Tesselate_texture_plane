@@ -5,7 +5,10 @@ Blender addon - Tesselate texture plane
 
 <!-- ### [Demo Youtube]() -->
 
-/!\ this addon need opncv and triangle module
+/!\ Can crash easily with some images and settings, be sure to save bedore
+If it crash on your image, try different settings. if it still crash... well I'm sorry.
+
+/!\ this addon need [opencv](https://pypi.org/project/opencv-python/) and [triangle](https://rufat.be/triangle/) module see below how to install
 
 Want to support me? [Check out how](http://www.samuelbernou.fr/donate)
 
@@ -13,6 +16,7 @@ Want to support me? [Check out how](http://www.samuelbernou.fr/donate)
 
 ## Description
 
+<!-- Get some gif images to show the thing ! -->
 
 <!-- ![example](https://github.com/Pullusb/images_repo/raw/master/blablabla.png) -->
 
@@ -23,10 +27,9 @@ The script was made by taking code portions of this [tesselate addon within the 
 
 Here are the main upgrade:
 - works in 2.8
-- use Opencv module instead of scikit/skyimage
+- use Opencv module instead of Scikit/Skyimage (still use Triangle)
 - better handling of holes when there are nested shapes and holes (might still not be perfect though).
-- expose options for tweaking tesselation.
-- more options (some are less stables)
+- expose options for tweaking tesselation (This makes it less stable than original).
 - Support UV that are deformed
 
 ## Needed module
@@ -59,7 +62,40 @@ If there is any uv_project modifier in stack, those will be applied automaticall
 
 ---
 
-
 ## Todo:
 - demo : make a demo
+
+- stability : problem... crash inside Traingle module command, dont know what the problem is...
+
 - puppet mode : make a planar snap bone creation tool to make a quick AE puppet style mode of rigging
+
+- option to get only contour with Ngon fill (easy)
+
+- add a pixel margin on image np.array (usefull when no alpha between borders), can be an option True by default
+
+- for options: pix_margin and pix_clean, change pixel values to a value relative to the shortest side of the source image (percentage ?)
+
+- check if mesh faces are co-planar
+#https://blender.stackexchange.com/questions/107357/how-to-find-if-geometry-linked-to-an-edge-is-coplanar
+
+
+optional todo:
+- maybe put a default less dense mesh
+
+- support messed up UVs
+   - almost OK, homography with perspective not always giving accurate results with big deformation.
+
+when transformed to operator :
+- choose the texture source if multiple in shader ? (or ensure this is the one connected to surface)
+- add presets ?
+
+
+
+
+<!--
+DONE:
+- On hard to understand values map to a range of 0-1
+    - simplify 0 ~ 0.002, or 0.001 ~ 0.002 with way to turn it off in interface (send 0)
+    - aeration 0.0001 ~ 0.01 
+    - min_angles 15 ~ 35
+ -->

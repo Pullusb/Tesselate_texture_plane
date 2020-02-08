@@ -19,11 +19,11 @@ bl_info = {
 "name": "Tesselate texture plane",
 "description": "Triangulate mesh on opaque area of selected texture planes",
 "author": "Samuel Bernou",
-"version": (0, 2, 0),
+"version": (1, 0, 0),
 "blender": (2, 80, 0),
-"location": "3D view > right toolbar > Tesselate",
-"warning": "",
-"wiki_url": "",
+"location": "3D view > right toolbar > Tesselate tex plane",
+"warning": "Some tesselation settings crash easyly ! Save before use",
+"wiki_url": "https://github.com/Pullusb/Tesselate_texture_plane",
 "category": "3D View"
 }
 
@@ -341,7 +341,7 @@ def generate_mesh(obj, res, npimg):
     mesh.update()
 
 
-def tesselate(obj, simplify=0.0010, pix_margin=2, min_angles=20, aeration=0.005, external_only=False, pix_clean=0, true_delaunay=False, gift_wrap=False, uv_mask=True):
+def tesselate(obj, contour_only=False, simplify=0.0010, pix_margin=2, min_angles=20, aeration=0.005, external_only=False, pix_clean=0, true_delaunay=False, algo_inc=False, gift_wrap=False, uv_mask=True):
     """
     Take a textured planar objects, triangulate the mesh based on texture aplha and replace it
 
@@ -370,6 +370,7 @@ def tesselate(obj, simplify=0.0010, pix_margin=2, min_angles=20, aeration=0.005,
     - true_delaunay :  conforming delaunay (instead of constrained delaunay)
     default=False (Bool)
 
+    - algo_inc : Use incremental algotrythm instead of divide and conquer
 
     Super optional Args
     - gift_wrap/convex_hull : close the convex hull of the shape
@@ -380,6 +381,7 @@ def tesselate(obj, simplify=0.0010, pix_margin=2, min_angles=20, aeration=0.005,
     """
     
     t_convert = time()#Dbgt
+    
     #Get texture associated with current object
     tex = get_tex(obj)
     if not tex:
@@ -391,10 +393,9 @@ def tesselate(obj, simplify=0.0010, pix_margin=2, min_angles=20, aeration=0.005,
     orig_img = np.array(b_img.pixels).reshape([b_img.size[1], b_img.size[0], 4])
 
     img = orig_img.copy()#make a copy to work on (check alpha).
-    #img = np.flipud(img) # flip along y axis #no need...
     
-    ### if need to print full array in console >> with np.printoptions(threshold=np.inf):
-    #print('img dtype, shape:', img.dtype, img.shape)
+    #img = np.flipud(img) # flip along y axis #corrected, no need anymore
+    ### if need to print full array in console >> with np.printoptions(threshold=np.inf): print('img dtype, shape:', img.dtype, img.shape)
 
     alphaimg = img[..., 3]#keep only alpha dimension
 
@@ -406,7 +407,7 @@ def tesselate(obj, simplify=0.0010, pix_margin=2, min_angles=20, aeration=0.005,
 
     alphaimg = np.array(alphaimg, dtype=np.uint8)#FindContours need a int-8 type array (so only 0,1 int values)
 
-    #alphaimg = np.rot90(alphaimg, k=-1)#old-rotate Clockwise... (Because vertex position was messed up in the end)
+    #alphaimg = np.rot90(alphaimg, k=-1)#old-rotate Clockwise... (Because vertex position was messed up in the end, no need)
     print('to binary image: {:.3f}s'.format(time() - t_convert))#Dgbt
     
     #######
@@ -466,7 +467,7 @@ def tesselate(obj, simplify=0.0010, pix_margin=2, min_angles=20, aeration=0.005,
     # debug_display_img(alphaimg, 'tesselation', alphaimg.shape[0], alphaimg.shape[1], base_one=False)
 
     #######
-    #### / traitement du contour
+    ### --- Contour handling with openCV
     #######
 
     if external_only:
@@ -494,7 +495,7 @@ def tesselate(obj, simplify=0.0010, pix_margin=2, min_angles=20, aeration=0.005,
     if not len(contours):
         print('NO CONTOURS DETECTED, aborting for obj', obj.name)
         return
-
+    
     prev_cnt_index = 0
 
     t_approxshape = time()#Dbgt
@@ -502,9 +503,8 @@ def tesselate(obj, simplify=0.0010, pix_margin=2, min_angles=20, aeration=0.005,
         cnt = c[:,0]#remove the upper level in nested list for coords in array [[x, y]] -> [x,y]
         np.append(cnt, cnt[0])#close shape
 
-        is_hole = h[3] != -1#if it has a parent index then it's a hole (with RETR_CCOMP)
+        is_hole = h[3] != -1# if it has a parent index then it's a hole (with RETR_CCOMP)
         # print('cnt : dtype', cnt.dtype, 'shape:', cnt.shape)#Dbg
-
 
         ### contour simplification, perform approximation per contour
         #https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_imgproc/py_contours/py_contour_features/py_contour_features.html#contour-approximation
@@ -514,33 +514,34 @@ def tesselate(obj, simplify=0.0010, pix_margin=2, min_angles=20, aeration=0.005,
             # print('len aprx cnt: ', len(cnt))#after
         
 
-        
         # Divide to get a 1x1 square. map between 0 and 1
-        cnt = cnt.astype(float)#convert polygons pixels coordinate to float so it can be mapped between 0,1
+        cnt = cnt.astype(float)# convert polygons pixels coordinate to float so it can be mapped between 0,1
         for axis in range(2):
             cnt[..., axis] /= float(alphaimg.shape[axis])
     
         cnt[..., 0] *= alphaimg.shape[0] / alphaimg.shape[1] # Get aspect ratio back
     
-        
+ 
         ### add vertices to contour dic.
-        cnt_dic['vertices'].extend(cnt)#extend to add every new contour as a flat list
+        cnt_dic['vertices'].extend(cnt)# extend to add every new contour as a flat list
+        
+        if contour_only:#face are directly using vertice order
+            cnt_dic['triangles'].append([prev_cnt_index + i for i,c in enumerate(cnt)])
 
-
-        #create segment list (index of the two vertices in dic['vertices'])
+        # create segment list (index of the two vertices in dic['vertices'])
         seglist = 'segments'
         for pt_i in range(len(cnt)-1):
             cnt_dic[seglist].append(
                 [pt_i + prev_cnt_index, pt_i + prev_cnt_index + 1] )
+        
         #add last segment
         cnt_dic[seglist].append([len(cnt) - 1 + prev_cnt_index, prev_cnt_index])
 
-
-        prev_cnt_index += len(cnt)#next contour will continue after last vertex index
+        prev_cnt_index += len(cnt)# next contour will continue after last vertex index
 
         if is_hole:
-            #to add a hole specify a point inside the hole.
-            # get x-y pair with the lowest y and create a point 1 pixel above.
+            # to add a hole, specify a point inside the hole.
+            # get x-y pair with the lowest y and create a point 1 pixel above (dirty but works in most cases...) #CBB
             lowest_y_pair = min(cnt, key=lambda x: x[1])
             cnt_dic['holes'].append( [lowest_y_pair[0], lowest_y_pair[1] + 0.0001] )
 
@@ -550,6 +551,18 @@ def tesselate(obj, simplify=0.0010, pix_margin=2, min_angles=20, aeration=0.005,
     for k in ('holes', 'triangles', 'segments'):
         if not cnt_dic[k]:
             del cnt_dic[k]
+
+    ### If contour only, no triangulation - direct mesh and return
+    if contour_only:
+        t_meshing = time()#Dbgt
+        generate_mesh(obj, cnt_dic, orig_img)
+        print('meshing contour: {:.3f}s'.format(time() - t_meshing))#Dgbt
+        print('Done')
+        return
+
+    #######
+    ### --- Tesselation with Triangle
+    #######
 
     ''' Tri opts details :
         p - Triangulates a Planar Straight Line Graph.
@@ -568,13 +581,21 @@ def tesselate(obj, simplify=0.0010, pix_margin=2, min_angles=20, aeration=0.005,
     '''
 
     tri_opts = 'p'#base, PSLG mode
-    # tri_opts = 'pi'#with incremental algorithm instead of divide-and-conquer (hard to notice diff...)
+
+    if algo_inc:
+        tri_opts += 'i'
+
+    ## Tests for stability issue
+    # tri_opts += 'C'# with Consistency check (exact arythmetics)... TEST, does not prevent crashs to happen
+    # tri_opts += 'X'# Suppresses exact arithmetic ('C' takes precedence) TEST, seems even more crashy
+
     # -> https://www.cs.cmu.edu/~quake/tripaper/triangle2.html
 
-    # tri_opts = 'pC'#base, PSLG mode with Consistency. testing purpose
 
     if min_angles:
         tri_opts += 'q' + str(min_angles)
+    # else:## stability TEST, with or without quality mesh
+    #     tri_opts += 'q'#just add the q ?
 
     if aeration:
         tri_opts += 'a' + "{:.4f}".format(aeration)# str(aeration)
@@ -585,10 +606,16 @@ def tesselate(obj, simplify=0.0010, pix_margin=2, min_angles=20, aeration=0.005,
     if gift_wrap:
         tri_opts += 'c'
 
-    
+
     t_triangulate = time()#Dbgt
     print('triangulate with opts:', tri_opts)
+    
+    # try:# Crash with access violation, try block useless
     res = triangle.triangulate(cnt_dic, opts=tri_opts) #opts='piqa0.0005') #'segments':cnt (force this segement to be use)
+    # except Exception as e:
+    #     print('triangulation has failed on object')
+    #     return
+
     print('triangulate: {:.3f}s'.format(time() - t_triangulate))#Dgbt
 
     print('points numbers:', len(res['vertices']))
@@ -614,7 +641,6 @@ def tesselate(obj, simplify=0.0010, pix_margin=2, min_angles=20, aeration=0.005,
     for s in res['segments']:
         draw_tuple_line(img, res['vertices'][s[0]], res['vertices'][s[1]], (255,0,0,1), thickness=1)#red
 
-
     ## debug display tesselation as image in image editor 
     #debug_display_img(img, 'tesselation', img.shape[0], img.shape[1], base_one=True)#need to pass True if img on base float 0.0 to 1.0
     # debug_display_img(img, 'tesselation', img.shape[0], img.shape[1], base_one=False)
@@ -635,17 +661,21 @@ def transfer_value(Value, OldMin, OldMax, NewMin, NewMax):
 
 class TESS_OT_tesselate_plane(Operator):
     bl_idname = "mesh.tesselate_plane"
-    bl_label = "Tesselate texplane"
+    bl_label = "Tesselate tex plane"
     bl_description = "Tesselate selected texture plane objects"
     bl_options = {"REGISTER", "UNDO"}#UNDO to change value, slight risk of crashing everything.. 
 
     @classmethod
     def poll(cls, context):
-        return True
+        return context.selected_objects
 
-    simplify : FloatProperty(name="Simplify", 
-    description="0=disabled, Approximation treshold", 
-    default=80, min=0.0, max=100.0, step=1, precision=1, subtype='PERCENTAGE', unit='NONE')
+    contour_only : BoolProperty(name="Contour only", 
+    description="No tesselation, just mesh contour of shapes (use only open-cv module)", 
+    default=False)
+
+    simplify : FloatProperty(name="Simplify contour", 
+    description="0=disabled, Approximation treshold\nHigher value simplify contour shape", # (less external points, so less triangle density)
+    default=1, min=0.0, max=100.0, step=1, precision=1, subtype='PERCENTAGE', unit='NONE')
 
     pix_margin : IntProperty(name="Pixel margin", 
     description="0=disabled, Dilate contour around shape", 
@@ -657,24 +687,28 @@ class TESS_OT_tesselate_plane(Operator):
 
     min_angles : IntProperty(name="Minimum angle", 
     description="0=disabled, Allow more triangle (augment the mimimum angle limitation)", 
-    default=40, min=0, max=100, step=1)
+    default=20, min=0, max=99, step=1)#100 run forever
 
     aeration : FloatProperty(name="Aeration", 
     description="Limit maximum tri area, low value means more density, add more triangles", 
-    default=50, min=-50, max=300, soft_min=0.0, soft_max=100.0, step=3, precision=2, subtype='PERCENTAGE', unit='NONE')
+    default=5, min=-50, max=300, soft_min=0.0, soft_max=100.0, step=3, precision=2, subtype='PERCENTAGE', unit='NONE')
 
     external_only : BoolProperty(name="External contour only", 
-    description="Only external contour of shapes, don't fill hole or internal shapes", 
-    default=False)
+    description="Discard holes or internal shapes, take only external contour of shapes", 
+    default=True)
 
 
     #--- optional args
     pix_clean : IntProperty(name="Pixel cleaning", 
     description="Delete surface with pixel dimensions smaller than given size. (Do not use if your source is pixel art)",
-    default=0, min=0, max=250, soft_min=0, soft_max=50, step=1, subtype='PIXEL')
+    default=2, min=0, max=250, soft_min=0, soft_max=50, step=1, subtype='PIXEL')
 
-    true_delaunay : BoolProperty(name="True Delaunay", 
-    description="Use another algorithm for delaunay triangulation (conforming delaunay instead of constrained delaunay)", 
+    true_delaunay : BoolProperty(name="True Delaunay algo", 
+    description="Use another algorithm for delaunay triangulation (conforming delaunay instead of constrained delaunay Triangle module settings)", 
+    default=False)
+
+    algo_inc : BoolProperty(name="incremental algo", 
+    description="Use incremental algorithm instead of divide-and-conquer (Triangle module settings)", 
     default=False)
 
     gift_wrap : BoolProperty(name="Gift wrap", 
@@ -690,11 +724,12 @@ class TESS_OT_tesselate_plane(Operator):
         #map/translate values from human readable to triangle and opencv value
         # Value = self.Value if self.Value == 0 else transfer_value(self.Value, OldMin, OldMax, NewMin, NewMax)
         
-        simplify = self.simplify if self.simplify == 0 else transfer_value(self.simplify, 0.0, 100.0, 0.0010, 0.0020)
+        simplify = self.simplify if self.simplify == 0 else transfer_value(self.simplify, 0.0, 100.0, 0.0001, 0.0025)#0.0010, 0.0020
 
         min_angles = self.min_angles if self.min_angles == 0 else transfer_value(self.min_angles, 0.0, 100.0, 10, 35)
 
-        aeration = self.aeration if self.aeration == 0 else transfer_value(self.aeration, 0.0, 100.0, 0.0001, 0.01)#0.0001(super dense)~0.01(low density) (0.001 seem like a mid value) 
+        # self.aeration if self.aeration == 0 else (disabling aearation to 0 max aeration !)
+        aeration = transfer_value(self.aeration, 0.0, 100.0, 0.00001, 0.01)#0.0001(super dense)~0.01(low density) (0.001 seem like a mid value) #old : 0.0001, 0.01
 
         #debug prints
         """ print()
@@ -761,6 +796,7 @@ class TESS_OT_tesselate_plane(Operator):
 
             ### TESSELATE
             tesselate(obj,
+            contour_only = self.contour_only,
             simplify = simplify,
             pix_margin = self.pix_margin,
             min_angles = min_angles,
@@ -768,6 +804,7 @@ class TESS_OT_tesselate_plane(Operator):
             external_only = self.external_only,
             pix_clean = self.pix_clean,
             true_delaunay = self.true_delaunay,
+            algo_inc = self.algo_inc,
             gift_wrap = self.gift_wrap,
             uv_mask = self.uv_mask
             )
@@ -797,29 +834,94 @@ class TESS_OT_tesselate_plane(Operator):
     
     def draw(self, context):
         layout = self.layout
-        layout.prop(self.simplify)
-        layout.prop(self.pix_margin)
-        layout.prop(self.min_angless)
-        layout.prop(self.aeration)
-        layout.prop(self.only_external)
-        layout.prop(self.pix_clean)
-        layout.prop(self.true_delaunay)
-        layout.prop(self.gift_wrap)
-        layout.prop(self.uv_mask)
+        layout.prop(self, "contour_only")
+        layout.prop(self, "simplify")
+        layout.prop(self, "aeration")
+        layout.prop(self, "pix_margin")
+        layout.prop(self, "pix_clean")
+        layout.prop(self, "external_only")
+        layout.prop(self, "uv_mask")
 
-class TESS_PT_tesselate_main_panel(Panel):
-    # bl_idname = "ADDONID_PT_panel_name"# identifier, if ommited, takes the name of the class.
-    bl_label = "panel name"# title
-    # bl_parent_id # If set, the panel becomes a sub-panel
-    ## bl_options = {'DEFAULT_CLOSED', 'HIDE_HEADER' }# closed by default, collapse the panel and the label
-    ## in 3D viewport 'N' menu
+        layout.label(text='Triangle extra:')
+        layout.prop(self, "gift_wrap")
+        layout.prop(self, "true_delaunay")
+        layout.prop(self, "min_angles")
+        layout.prop(self, "algo_inc")
+
+    def invoke(self, context, event):
+        # panel to operator variable attribution (for the redo)
+        self.contour_only = context.scene.ttp_props.contour_only
+        self.simplify = context.scene.ttp_props.simplify
+        self.pix_margin = context.scene.ttp_props.pix_margin
+        self.min_angles = context.scene.ttp_props.min_angles
+        self.aeration = context.scene.ttp_props.aeration
+        self.external_only = context.scene.ttp_props.external_only
+        self.pix_clean = context.scene.ttp_props.pix_clean
+        self.true_delaunay = context.scene.ttp_props.true_delaunay
+        self.gift_wrap = context.scene.ttp_props.gift_wrap
+        self.uv_mask = context.scene.ttp_props.uv_mask
+        self.algo_inc = context.scene.ttp_props.algo_inc
+
+        return self.execute(context)
+
+class TESS_props_group(PropertyGroup):
+    '''Duplicate props of the operator to display in panel'''
+
+    contour_only : BoolProperty(name="Contour only", 
+    description="No tesselation, just mesh contour of shapes (use only open cv module)", 
+    default=False)
+
+    simplify : FloatProperty(name="Simplify contour", 
+    description="0=disabled, Approximation treshold\nHigher value simplify contour shape", # (less external points, can also trigger less triangle density)
+    default=1, min=0.0, max=100.0, step=1, precision=1, subtype='PERCENTAGE', unit='NONE')
+
+    pix_margin : IntProperty(name="Pixel margin", 
+    description="0=disabled, Dilate contour around shape", 
+    default=2, min=0, max=800, soft_min=0, soft_max=50, step=1, subtype='PIXEL')
+
+    min_angles : IntProperty(name="Minimum angle", 
+    description="0=disabled, Add more triangle by augmenting the mimimum angle limitation\nAdd more density variation", 
+    default=20, min=0, max=99, step=1)#100 run forever
+
+    aeration : FloatProperty(name="Aeration", 
+    description="Limit maximum tri area, low value means more density, add more triangles", 
+    default=5, min=-50, max=300, soft_min=0.0, soft_max=100.0, step=3, precision=2, subtype='PERCENTAGE', unit='NONE')
+
+    external_only : BoolProperty(name="External contour only", 
+    description="Discard holes or internal shapes, take only external contour of shapes", 
+    default=True)
+
+    #--- optional args
+    pix_clean : IntProperty(name="Pixel cleaning", 
+    description="Delete surface with pixel dimensions smaller than given size. (Do not use if your source is pixel art)",
+    default=2, min=0, max=250, soft_min=0, soft_max=50, step=1, subtype='PIXEL')
+
+    true_delaunay : BoolProperty(name="True Delaunay algo", 
+    description="Use another algorithm for delaunay triangulation (conforming delaunay instead of constrained delaunay Triangle module settings)\nMake sure voronoï cells are at center of each triangle (can make little tris)", 
+    default=False)
+
+    algo_inc : BoolProperty(name="incremental algo", 
+    description="Use incremental algorithm instead of divide-and-conquer (Triangle module settings, from triangle doc)", 
+    default=False)
+
+    gift_wrap : BoolProperty(name="Gift wrap", 
+    description="Close the convex hull of the shape", 
+    default=False)
+
+    uv_mask : BoolProperty(name="UV mask", 
+    description="Generate geometry only on parts enclosed in the UV quad. If False the whole texture is meshed in 3D space", 
+    default=True)
+
+
+### --- PANELS 
+
+class TESS_PT_tesselate_UI(Panel):
+    bl_label = "Tex plane tesselation"# title
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "Tool"#name of the tab
-    # activating on some context only
-    bl_context = "objectmode"
+    bl_context = "objectmode"#only in object mode
 
-    #need to be in object mode and have at least an active object
     @classmethod
     def poll(cls, context):
         return (context.object is not None)# and context.mode == 'OBJECT'
@@ -831,78 +933,87 @@ class TESS_PT_tesselate_main_panel(Panel):
         row = layout.row()
         row.operator("mesh.tesselate_plane")
 
-        # layout.use_property_split = False
-        # row = layout.row(align=True)
-        # row.prop(obj, 'hide_viewport')
-        # row.prop(obj, 'hide_render')
-        # row = layout.row(align=True)
-        # row.prop(obj.cycles, 'use_motion_blur')
+        col = layout.column()
+        
 
-        # layout.separator()#Get some space
+        col.prop(context.scene.ttp_props, "contour_only")
 
-        # box = layout.box()#put something in a box
-        # box.label(text="Selection Tools")
-        # box.operator("object.select_all").action = 'TOGGLE'#call default operators with options
-        # row = box.row()
-        # row.operator("object.select_all", text='Invert select').action = 'INVERT'
-        # row.operator("object.select_random")
+        col.prop(context.scene.ttp_props, "simplify")
+        
+        scol = col.column()
+        scol.enabled = not context.scene.ttp_props.contour_only
+        scol.prop(context.scene.ttp_props, "aeration")
+        col = layout.column()
 
-        # row = layout.row()
-        # row.operator("mesh.primitive_cube_add")
+        col.separator()
+        col.prop(context.scene.ttp_props, "pix_margin")
+        col.prop(context.scene.ttp_props, "pix_clean")
 
-# # Sub panel
-# class ADDONID_PT_subpanel(bpy.types.Panel):
-#     bl_space_type = 'VIEW_3D'
-#     bl_region_type = 'UI'
-#     bl_category = "Tool"
+        scol = col.column()
+        scol.enabled = not context.scene.ttp_props.contour_only
+        scol.prop(context.scene.ttp_props, "external_only")
+        col = layout.column()
 
-#     # bl_idname = "ADDONID_PT_panel_name"# identifier, if ommited, takes the name of the class.
-#     bl_label = "some scenes options"# title
-#     bl_parent_id = "ADDONID_PT_panel_name"
+        col.prop(context.scene.ttp_props, "uv_mask")
 
-#     def draw(self, context):
-#         layout = self.layout
-#         layout.use_property_split = True
-#         layout.prop(context.scene.render, "film_transparent", text="transparent")
-#         layout.prop(context.scene.cycles, "samples")
-#         layout.prop(bpy.context.scene.tool_settings, "use_snap")
+
+# Triangle sub-panel
+class TESS_PT_subsettings_UI(Panel):
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Tool"
+
+    bl_label = "Triangle extra settings"# title
+    bl_parent_id = "TESS_PT_tesselate_UI"
+    bl_options = {'DEFAULT_CLOSED'}#, 'HIDE_HEADER' 
+    # bl_context = "objectmode"#only in object mode
+
+    @classmethod
+    def poll(cls, context):
+        return context.object is not None and not context.scene.ttp_props.contour_only
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        
+        layout.prop(context.scene.ttp_props, "min_angles")
+        layout.prop(context.scene.ttp_props, "gift_wrap")
+        layout.prop(context.scene.ttp_props, "true_delaunay")
+        layout.prop(context.scene.ttp_props, "algo_inc")
+
+        # Maybe add a show wire option ?
 
 ### --- REGISTER ---
 
 classes = (
 TESS_OT_tesselate_plane,
-TESS_PT_tesselate_main_panel,
+TESS_PT_tesselate_UI,
+TESS_PT_subsettings_UI,
 )
 
-register, unregister = bpy.utils.register_classes_factory(classes)
+# register, unregister = bpy.utils.register_classes_factory(classes)
+# if __name__ == "__main__":
+#     register()
+
+def register():
+    from bpy.utils import register_class
+    
+    register_class(TESS_props_group)
+    bpy.types.Scene.ttp_props = PointerProperty(type=TESS_props_group)
+    
+    for cls in classes:
+        register_class(cls)
+    
+
+def unregister():
+    from bpy.utils import unregister_class
+
+
+    unregister_class(TESS_props_group)
+    for cls in reversed(classes):
+        unregister_class(cls)
+    del bpy.types.Scene.ttp_props 
+
 
 if __name__ == "__main__":
     register()
-
-'''
-TODO:
-- support messed up UVs
-   - almost OK, homography with perspective not always giving accurate results with big deformation.
-
-- option to get only contour with Ngon fill (easy)
-
-- add a pixel margin on image np.array (usefull when no alpha between borders), can be an option True by default
-
-- for options: pix_margin and pix_clean, change pixel values to a value relative to the shortest side of the source image (percentage ?)
-
-- check if mesh faces are co-planar
-#https://blender.stackexchange.com/questions/107357/how-to-find-if-geometry-linked-to-an-edge-is-coplanar
-
-optional todo:
-- maybe put a default less dense mesh
-
-#when transformed to operator :
-- choose the texture source if multiple in shader ? (or ensure this is the one connected to surface)
-- add presets ?
-
-DONE:
-- On hard to understand values map to a range of 0-1
-    - simplify 0 ~ 0.002, or 0.001 ~ 0.002 with way to turn it off in interface (send 0)
-    - aeration 0.0001 ~ 0.01 
-    - min_angles 15 ~ 35
-'''

@@ -16,88 +16,101 @@ Want to support me? [Check out how](http://www.samuelbernou.fr/donate)
 
 ## Description  
 
-Automatically tesselate a plane texture mesh while discarding parts were there is no alpha.  
-You can also jsut mesh the contour without tesselation.  
-The main purpose of the tesselation is to have a some vertices density in the mesh to be able to do "puppets" deformation with rigging.
+Automatically tesselate a opaque zone of a texture plane mesh.  
+You can also just create the contour without tesselation.  
+The main purpose of the tesselation is to have a some vertices density in the mesh to be able to do "puppet" deformations with some rigging (similar to the puppet tool of After Effects).
 
-Exemple:
-With _import image as plane_ addon, I imported this ryu drawing image (found ramdomly on the web for test purpose).
-"contour only" option generate a mesh with stripped alpha, otherwise it does the same with the contour but fill it with internal triangles.
+Exemple:  
+With _import image as plane_ addon, I imported this Ryu drawing image (found ramdomly on the web for test purpose).
+"contour only" option generate a mesh with stripped alpha,  
+otherwise it generate the same contour but fill it with internal triangles.
 
 ![demo](https://github.com/Pullusb/images_repo/raw/master/tess_usage_exemple.png)
 
-And after some rig/skinning/animation...
-![paper ryu rig idle](https://github.com/Pullusb/images_repo/raw/master/paper_ryu-idleGl_20fps.gif)
+And after some rig/skinning/animation...  
 
-...I got _Paper ryu_!
+![paper ryu rig](https://github.com/Pullusb/images_repo/raw/master/paper_ryu-maillage_rig.png)
+
+...I got _Paper ryu_!  
 
 ![paper ryu idle](https://github.com/Pullusb/images_repo/raw/master/paper_ryu-idle_20fps.gif)
 
-_"Papeeer - tatsumaki!"_
+_"Papeeer tatsumaki!"_  
+
 
 ![paper ryu idle](https://github.com/Pullusb/images_repo/raw/master/paper_ryu-tatsumaki_20fps.gif)
 
+Here is the anim pose with wire
 
-### options detail
+![paper ryu rig idle anim](https://github.com/Pullusb/images_repo/raw/master/paper_ryu-idleGl_20fps.gif)
 
-Contour only : No tesselation, just mesh the contour of the shape and fill with one Ngon face per separated "island" (stable, use only open-cv module) note : dont put hole in face  
+
+---
+
+### Options detail
+
+**Contour only** : No tesselation, just mesh the contour of the shape and fill with one Ngon face per separated "island" (stable, use only open-cv module).  
+Note : does not handle holes.  
 
 ![contour only](https://github.com/Pullusb/images_repo/raw/master/tess_contour_only.png)
 
 
-Simplify contour : 0=disabled, Approximation treshold of the contour polygon  
-Higher value decimate the mesh contour shape  
-Note: More simplification need also more pixel margin to avoid cutting though image  
+Simplify contour : 0=disabled, Approximation treshold of the contour polygon.  
+Higher value decimate the mesh contour shape.  
+Note: More simplification need also more pixel margin to avoid cutting though image.  
 
 ![simplify](https://github.com/Pullusb/images_repo/raw/master/tess_simplify_contour_2fps.gif)
 
 
-Aeration : Limit maximum tri area, low value means more density, add more triangles
+**Aeration** : Limit maximum tri area, low value means more density (more triangles).  
 
-Pixel margin : 0=disabled, Dilate contour around shape  
+![aeration](https://github.com/Pullusb/images_repo/raw/master/aeration_2fps.gif)
+
+**Pixel margin** : 0=disabled, Dilate contour around shapes.  
 
 ![pix margin](https://github.com/Pullusb/images_repo/raw/master/tess_pixel_margin_2fps.gif)
 
-Pixel cleaning : Delete surface with pixel dimensions smaller than given pixel size. (Do not use if your source is pixel art)  
-Usefull for cleaning rogues pixels, but carefull, pushing too much can also erode surface angles  
-In the example black part have alpha at 0 (smart test image this time)  
+**Pixel cleaning** : Delete surface with pixel dimensions smaller than given pixel size. (Do not use if your source is pixel art).  
+Usefull for cleaning unwanted rogues pixels, pushing too much can also erode surface angles.  
+In the example black part have alpha at 0 (smart test image isn't it  ?)  
 
 ![pix clean](https://github.com/Pullusb/images_repo/raw/master/tess_pixel_cleaning_2fps.gif)
 
 
-Minimum angle : 0=disabled, "quality mesh generation" value, augment the mimimum angle limitation (note that value is not given in angle), basically means more triangle with better repartition.  
+**Minimum angle** : 0=disabled, "quality mesh generation" value, augment the mimimum angle limitation.  
+The value is not given as an angle but as min/max available. Basically means more triangle with better repartition.  
 Note : This have a big influence on aeration ! Add more density variation (kind of like Dyntopo for sculpting).  
 It sizes triangles as needed (usually smaller on the mesh boundary) resulting in a better quality result. 
 
 ![min angle](https://github.com/Pullusb/images_repo/raw/master/tess_minimum_angle_2fps.gif)
 
 
-External contour only : Discard holes or internal shapes, take only external contour of shapes
+**External contour only** : Discard holes or internal shapes, detect only external contour of shapes.  
+
 ![holes](https://github.com/Pullusb/images_repo/raw/master/tess_hole_shape.png)
 
 
-Gift wrap : Close the convex hull of the shape  
+**Gift wrap** : Close the convex hull of the shape  
 
 ![gift wrapping](https://github.com/Pullusb/images_repo/raw/master/tess_convex_hull.png)
 
-UV mask : Generate geometry only on parts enclosed in the UV quad. If False the whole texture is meshed in 3D space  
+**UV mask** : Generate geometry only on parts enclosed in the UV quad. If False the whole texture is meshed in 3D space.  
 
 ![uv limits](https://github.com/Pullusb/images_repo/raw/master/tess_uv_masking.png)
 
-True Delaunay algo : Use another algorithm for delaunay triangulation, conforming delaunay instead of constrained delaunay Triangle module settings.   
-Results isn't so different usually, this algorithm make sure voronoï cells are at center of each triangle (can force generation of super tiny tris by complying to this rule)  
+**True Delaunay algo** : Use another algorithm for delaunay triangulation, conforming delaunay instead of constrained delaunay Triangle module settings. Results isn't so different, but this algorithm make sure voronoï cells are at center of each triangles (can force generation of super tiny tris by complying to this rule).  
 <!-- discarded :  incremental algo : Use incremental algorithm instead of divide-and-conquer (Triangle module settings)   -->
 
 ## Credits
 
-The addon is heavily inspired by the [tesselate addon within the rigging scripts released by "les fée spéciales" studio](https://github.com/LesFeesSpeciales/blender-rigging-scripts).  
+The addon is heavily inspired by the original [Tesselate addon](https://github.com/LesFeesSpeciales/blender-rigging-scripts) within the rigging scripts released by "les fée spéciales" studio.  
 
 Here are the main differences:
 - 2.8
 - use Opencv module instead of Scikit+Skyimage (still use Triangle for tesselation)
 - better handling of holes when there are nested shapes (might still not be perfect though).
 - expose a lot of options for tweaking (This also makes it a lot less stable...).
-- Support (slighly) deformed UVs
+- Support (slightly) deformed UVs
 
 
 ## Installation of needed module  
@@ -121,9 +134,10 @@ If _triangle_ doesn't install properly with pip, follow [this tutorial on module
 Panel in sidebar : 3D view > sidebar 'N' > Tool > Tex plane tesselation
 
 
-### Note
+### Additional notes
 
 If there is any uv_project modifier in stack, those will be applied automatically before running _(maybe add a checkbox to choose to bypass...)_
+Any subdivision modifiers will be deleted before applying.
 
 ---
 

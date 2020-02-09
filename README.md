@@ -16,8 +16,9 @@ Want to support me? [Check out how](http://www.samuelbernou.fr/donate)
 
 ## Description  
 
-You can tesselate only the contour of a plane texture if you just need to strip the alpha from.
-The purpose of the tesselation is to have a some vertices density in the mesh to be able to do "puppets" deformation with rigging.
+Automatically tesselate a plane texture mesh while discarding parts were there is no alpha.  
+You can also jsut mesh the contour without tesselation.  
+The main purpose of the tesselation is to have a some vertices density in the mesh to be able to do "puppets" deformation with rigging.
 
 Exemple:
 With _import image as plane_ addon, I imported this ryu drawing image (found ramdomly on the web for test purpose).
@@ -25,8 +26,19 @@ With _import image as plane_ addon, I imported this ryu drawing image (found ram
 
 ![demo](https://github.com/Pullusb/images_repo/raw/master/tess_usage_exemple.png)
 
+And after some rig/skinning/animation...
+![paper ryu rig idle](https://github.com/Pullusb/images_repo/raw/master/paper_ryu-idleGl_20fps.gif)
 
-### options
+...I got _Paper ryu_!
+
+![paper ryu idle](https://github.com/Pullusb/images_repo/raw/master/paper_ryu-idle_20fps.gif)
+
+_"Papeeer - tatsumaki!"_
+
+![paper ryu idle](https://github.com/Pullusb/images_repo/raw/master/paper_ryu-tatsumaki_20fps.gif)
+
+
+### options detail
 
 Contour only : No tesselation, just mesh the contour of the shape and fill with one Ngon face per separated "island" (stable, use only open-cv module) note : dont put hole in face  
 
@@ -72,21 +84,21 @@ UV mask : Generate geometry only on parts enclosed in the UV quad. If False the 
 
 ![uv limits](https://github.com/Pullusb/images_repo/raw/master/tess_uv_masking.png)
 
-True Delaunay algo : Use another algorithm for delaunay triangulation (conforming delaunay instead of constrained delaunay Triangle module settings)  
-Not so different, this algorythm make sure voronoï cells are at center of each triangle (can force generation of super tiny tris to comply to this rule)  
-
+True Delaunay algo : Use another algorithm for delaunay triangulation, conforming delaunay instead of constrained delaunay Triangle module settings.   
+Results isn't so different usually, this algorithm make sure voronoï cells are at center of each triangle (can force generation of super tiny tris by complying to this rule)  
 <!-- discarded :  incremental algo : Use incremental algorithm instead of divide-and-conquer (Triangle module settings)   -->
 
 ## Credits
 
 The addon is heavily inspired by the [tesselate addon within the rigging scripts released by "les fée spéciales" studio](https://github.com/LesFeesSpeciales/blender-rigging-scripts).  
 
-Here are the main upgrade:
-- works in 2.8
-- use Opencv module instead of Scikit/Skyimage (still use Triangle for tesselation)
+Here are the main differences:
+- 2.8
+- use Opencv module instead of Scikit+Skyimage (still use Triangle for tesselation)
 - better handling of holes when there are nested shapes (might still not be perfect though).
 - expose a lot of options for tweaking (This also makes it a lot less stable...).
 - Support (slighly) deformed UVs
+
 
 ## Installation of needed module  
 

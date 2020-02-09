@@ -1,4 +1,7 @@
-# ##### BEGIN GPL LICENSE BLOCK #####
+# Copyright (C) 2020 Samuel Bernou
+# bernou.samuel@gmail.com
+
+# # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -19,10 +22,10 @@ bl_info = {
 "name": "Tesselate texture plane",
 "description": "Triangulate mesh on opaque area of selected texture planes",
 "author": "Samuel Bernou",
-"version": (1, 0, 0),
+"version": (1, 0, 2),
 "blender": (2, 80, 0),
 "location": "3D view > right toolbar > Tesselate tex plane",
-"warning": "Some tesselation settings crash easyly ! Save before use",
+"warning": "Stable in 'contour only' mode, but some tesselation settings crash Blender ! (Save before use)",
 "wiki_url": "https://github.com/Pullusb/Tesselate_texture_plane",
 "category": "3D View"
 }
@@ -674,7 +677,7 @@ class TESS_OT_tesselate_plane(Operator):
     default=False)
 
     simplify : FloatProperty(name="Simplify contour", 
-    description="0=disabled, Approximation treshold\nHigher value simplify contour shape", # (less external points, so less triangle density)
+    description="0=disabled, Approximation treshold\nHigher value simplify contour shape\nNote: More simplify need also more pixel margin to avoid cutting though image", # (less external points, so less triangle density)
     default=1, min=0.0, max=100.0, step=1, precision=1, subtype='PERCENTAGE', unit='NONE')
 
     pix_margin : IntProperty(name="Pixel margin", 
@@ -860,7 +863,7 @@ class TESS_OT_tesselate_plane(Operator):
         self.true_delaunay = context.scene.ttp_props.true_delaunay
         self.gift_wrap = context.scene.ttp_props.gift_wrap
         self.uv_mask = context.scene.ttp_props.uv_mask
-        self.algo_inc = context.scene.ttp_props.algo_inc
+        # self.algo_inc = context.scene.ttp_props.algo_inc
 
         return self.execute(context)
 
@@ -872,7 +875,7 @@ class TESS_props_group(PropertyGroup):
     default=False)
 
     simplify : FloatProperty(name="Simplify contour", 
-    description="0=disabled, Approximation treshold\nHigher value simplify contour shape", # (less external points, can also trigger less triangle density)
+    description="0=disabled, Approximation treshold\nHigher value simplify contour shape\nNote: More simplify need also more pixel margin to avoid cutting though image", # (less external points, can also trigger less triangle density)
     default=1, min=0.0, max=100.0, step=1, precision=1, subtype='PERCENTAGE', unit='NONE')
 
     pix_margin : IntProperty(name="Pixel margin", 
@@ -979,8 +982,7 @@ class TESS_PT_subsettings_UI(Panel):
         layout.prop(context.scene.ttp_props, "min_angles")
         layout.prop(context.scene.ttp_props, "gift_wrap")
         layout.prop(context.scene.ttp_props, "true_delaunay")
-        layout.prop(context.scene.ttp_props, "algo_inc")
-
+        # layout.prop(context.scene.ttp_props, "algo_inc")#No need...
         # Maybe add a show wire option ?
 
 ### --- REGISTER ---

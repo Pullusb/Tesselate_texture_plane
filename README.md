@@ -64,7 +64,7 @@ Note: More simplification need also more pixel margin to avoid cutting though im
 
 **Aeration** : Limit maximum tri area, low value means more density (more triangles).  
 
-![aeration](https://github.com/Pullusb/images_repo/raw/master/aeration_2fps.gif)
+![aeration](https://github.com/Pullusb/images_repo/raw/master/tess_aeration_setting_2fps.gif)
 
 **Pixel margin** : 0=disabled, Dilate contour around shapes.  
 

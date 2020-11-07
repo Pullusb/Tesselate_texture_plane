@@ -5,10 +5,12 @@ Blender addon - Tesselate texture plane
   
 <!-- ### [Demo Youtube]() -->
 
-/!\ Can crash easily with some images and settings (stable in "contour only" mode), be sure to save before use.  
-If it crash on your image, try different settings. if it still crash... well I'm sorry.  
+/!\ Triangulating can crash with some images and settings (stable in "contour only" mode), be sure to save before use.  
+If it crash on your image, try different settings.  
 
-/!\ This addon need [opencv](https://pypi.org/project/opencv-python/) and [triangle](https://rufat.be/triangle/) module see below how to install
+/!\ This addon need [opencv](https://pypi.org/project/opencv-python/) and [triangle](https://rufat.be/triangle/) modules
+At first activation, it will try to make an automatic download/installation.  
+If this doesn't work, [go below to manual install](#-manual-installation-of-needed-module).  
 
 Want to support me? [Check out how](http://www.samuelbernou.fr/donate)
 
@@ -113,7 +115,7 @@ Here are the main differences:
 - Support (slightly) deformed UVs
 
 
-## Installation of needed module  
+## Manual installation of needed module  
 
 This addons use two python modules to work. You have to install _triangulate_ and _opencv_.  
 Be sure to download a version compatible with Blender 2.80's python 3.7.
@@ -170,7 +172,29 @@ Optional todo:
 
 - add presets ?
 
+### TODO:
 
-<!-- ### Change log:
-  2020/02/09 (1, 0, 2):
-  - Main version ready -->
+<!-- - How to import modules in global variables fropm a loop
+
+```
+import importlib
+for mod, pack in DEPENDENCIES:
+    importlib.import_module(mod)
+``` -->
+
+
+### Change log:
+
+
+1.1.0:
+
+- modules auto-install using pip (tested only on windows)
+- UI: redo panel is now the same as sidebar UI  
+- Exposed disply wireframe in the UI
+- Added tracker URL infos
+
+1.0.2:
+
+- Main version ready:
+  - cv2 contour stable
+  - some images/settings can still crash blender in tesselation (using triangle module)

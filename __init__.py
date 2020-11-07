@@ -22,22 +22,37 @@ bl_info = {
 "name": "Tesselate texture plane",
 "description": "Triangulate mesh on opaque area of selected texture planes",
 "author": "Samuel Bernou",
-"version": (1, 0, 2),
+"version": (1, 1, 0),
 "blender": (2, 80, 0),
 "location": "3D view > right toolbar > Tesselate tex plane",
 "warning": "Stable in 'contour only' mode, but some tesselation settings crash Blender ! (Save before use)",
 "wiki_url": "https://github.com/Pullusb/Tesselate_texture_plane",
+"tracker_url": "https://github.com/Pullusb/Tesselate_texture_plane/issues",
 "category": "3D View"
 }
 
 
 import bpy
-import cv2
 import numpy as np
-import triangle# triangle doc >> https://rufat.be/triangle/API.html
 import bmesh
 from mathutils import Vector, Matrix
 from time import time
+
+## module auto-install
+## module_name, package_name
+DEPENDENCIES = {
+    ('cv2', 'opencv-python'),# opencv-contrib-python
+    ('triangle', 'triangle'),
+}
+
+from . import auto_modules
+
+error = auto_modules.pip_install_and_import(DEPENDENCIES)
+if error:
+    raise Exception('Cannot import modules (see console). Try restarting blender as admin') from error
+
+import cv2
+import triangle # triangle doc >> https://rufat.be/triangle/API.html
 
 ## addon basic import shortcuts for class types and props
 from bpy.props import (IntProperty,
@@ -837,19 +852,32 @@ class TESS_OT_tesselate_plane(Operator):
     
     def draw(self, context):
         layout = self.layout
-        layout.prop(self, "contour_only")
-        layout.prop(self, "simplify")
-        layout.prop(self, "aeration")
-        layout.prop(self, "pix_margin")
-        layout.prop(self, "pix_clean")
-        layout.prop(self, "external_only")
-        layout.prop(self, "uv_mask")
+        col = layout.column()
+        col.prop(self, "contour_only")
+        col.prop(self, "simplify")
 
-        layout.label(text='Triangle extra:')
-        layout.prop(self, "gift_wrap")
-        layout.prop(self, "true_delaunay")
-        layout.prop(self, "min_angles")
-        layout.prop(self, "algo_inc")
+        scol = col.column()
+        scol.enabled = not self.contour_only
+        scol.prop(self, "aeration")
+        col = layout.column()
+
+        col.separator()
+        col.prop(self, "pix_margin")
+        col.prop(self, "pix_clean")
+
+        scol = col.column()
+        scol.enabled = not self.contour_only
+        scol.prop(self, "external_only")
+        col = layout.column()
+
+        col.prop(self, "uv_mask")
+
+        scol = col.column()
+        scol.label(text='Triangle extra:')
+        scol.prop(self, "gift_wrap")
+        scol.prop(self, "true_delaunay")
+        scol.prop(self, "min_angles")
+        # scol.prop(self, "algo_inc")
 
     def invoke(self, context, event):
         # panel to operator variable attribution (for the redo)
@@ -927,12 +955,13 @@ class TESS_PT_tesselate_UI(Panel):
 
     @classmethod
     def poll(cls, context):
-        return (context.object is not None)# and context.mode == 'OBJECT'
+        return context.object is not None# and context.mode == 'OBJECT'
 
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
 
+        layout.prop(context.object, 'show_wire')
         row = layout.row()
         row.operator("mesh.tesselate_plane")
 

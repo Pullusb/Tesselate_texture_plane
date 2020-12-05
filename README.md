@@ -47,6 +47,9 @@ Here is the anim pose with wire
 ![paper ryu rig idle anim](https://github.com/Pullusb/images_repo/raw/master/paper_ryu-idleGl_20fps.gif)
 
 
+
+> Ryu drawing by [steamboy](https://www.deviantart.com/steamboy33) ([deviant art page](https://www.deviantart.com/steamboy33/art/Ryu-THird-Strike-HD-291153215)), he made a superb animation with pretty much the same technique in after effect (combining multiple layers), [see details here](https://mugenguild.com/forum/index.php?topic=139727.0)
+
 ---
 
 ### Options detail

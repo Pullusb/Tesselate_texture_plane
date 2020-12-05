@@ -3,7 +3,7 @@ Blender addon - Tesselate texture plane
   
 **[Download latest](https://github.com/Pullusb/Tesselate_texture_plane/archive/master.zip)**
   
-<!-- ### [Demo Youtube]() -->
+### [Demo Youtube](https://youtu.be/bCw7BN5J8Pk)
 
 /!\ Triangulating can crash with some images and settings (stable in "contour only" mode), be sure to save before use.  
 If it crash on your image, try different settings.  

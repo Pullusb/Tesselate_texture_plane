@@ -22,8 +22,8 @@ Automatically tesselate a opaque zone of a texture plane mesh.
 You can also just create the contour without tesselation.  
 The main purpose of the tesselation is to have a some vertices density in the mesh to be able to do "puppet" deformations with some rigging (similar to the puppet tool of After Effects).
 
-Exemple:  
-With _import image as plane_ addon, I imported this Ryu drawing image (found ramdomly on the web for test purpose).
+Example:  
+With _import image as plane_ addon, I imported this Ryu drawing image (found randomly on the web for test purpose).
 "contour only" option generate a mesh with stripped alpha,  
 otherwise it generate the same contour but fill it with internal triangles.
 

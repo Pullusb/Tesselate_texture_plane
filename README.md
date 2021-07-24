@@ -5,12 +5,18 @@ Blender addon - Tesselate texture plane
   
 ### [Demo Youtube](https://youtu.be/bCw7BN5J8Pk)
 
-/!\ Triangulating can crash with some images and settings (stable in "contour only" mode), be sure to save before use.  
+
+/!\ IMPORTANT NOTES:
+- RUN BLENDER AS ADMIN might be needed at first activation to enable auto-installation of needed third party modules (tested on windows).
+- Not compatible with 2.93 and upper version yet due to python modules compatibility (max 2.92)
+
+Triangulating can crash with some images and settings (stable in "contour only" mode), be sure to save before use.  
 If it crash on your image, try different settings.  
 
-/!\ This addon need [opencv](https://pypi.org/project/opencv-python/) and [triangle](https://rufat.be/triangle/) modules
+This addon need [opencv](https://pypi.org/project/opencv-python/) and [triangle](https://rufat.be/triangle/) modules
 At first activation, it will try to make an automatic download/installation.  
 If this doesn't work, [go below to manual install](#-manual-installation-of-needed-module).  
+
 
 Want to support me? [Check out how](http://www.samuelbernou.fr/donate)
 

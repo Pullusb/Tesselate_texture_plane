@@ -16,7 +16,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
-import os
+import os, sys
 import subprocess
 from pathlib import Path
 
@@ -24,7 +24,7 @@ from pathlib import Path
 # DEFAULT_CACHE_DIR = Path(__file__).resolve().parent / "cache"# os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache")
 # SUBPROCESS_DIR = PYTHON_PATH.parent
 
-PYTHON_PATH = Path(bpy.app.binary_path_python)
+PYTHON_PATH = Path(sys.executable)
 BLENDER_SITE_PACKAGE = PYTHON_PATH.parents[1] / 'lib' / 'site-packages'
 # or: BLENDER_SITE_PACKAGE = Path(bpy.utils.resource_path('LOCAL')) / 'python' / 'lib' / 'site-packages'
 
@@ -84,13 +84,12 @@ def pip_install_and_import(dependencies):
     # os.environ['PYTHONUSERBASE'] = str(BLENDER_SITE_PACKAGE)
     for module_name, package_name in dependencies:
         # '--user'# install for all version of blender (suposely in app data roaming or config files...)
-        # '--no-deps'# dont update dependancy
+        # '--no-deps'# dont update dependancy (in this case, avoid installing downloading a duplication of  numpy)
 
-        ## ? maybe put this try exept block into a func when template is triggered ?
         try:
             __import__(module_name)
-            return
-        
+            continue
+
         except ImportError:
             try:
                 ## auto install dependancy (need to run as admin)
@@ -114,14 +113,22 @@ def pip_install_and_import(dependencies):
                         external_modules = external_scripts / 'modules'
                         print(f'using external scripts modules: {external_modules}')
                         external_modules.mkdir(exist_ok=True)# dont raise error if already exists
-                        subprocess.check_call([str(PYTHON_PATH), "-m", "pip", "install", f'--target={external_modules}', package_name])
+                        
+                        # cmd = [str(PYTHON_PATH), "-m", "pip", "install", f'--target={external_modules}', package_name]
+                        cmd = [str(PYTHON_PATH), "-m", "pip", '--no-cache-dir', "install", f'--target={external_modules}', package_name, '--no-deps']
+                        print('Run', ' '.join(cmd))
+                        subprocess.check_call(cmd)
                         done=True
                 
                 ## within user local modules (if not in external scripts)
                 if not done:
-                    user_module = Path(bpy.utils.user_resource('SCRIPTS', 'modules', create=True))#create the folder if not exists
-                    print(f'using users modules: {user_module}')
-                    subprocess.check_call([str(PYTHON_PATH), "-m", "pip", "install", f'--target={user_module}', package_name])
+                    user_module = Path(bpy.utils.user_resource('SCRIPTS', path='modules', create=True)) # create the folder if not exists
+                    print(f'Using users modules: {user_module}')
+                    
+                    # cmd = [str(PYTHON_PATH), "-m", "pip", "install", f'--target={user_module}', package_name]
+                    cmd = [str(PYTHON_PATH), "-m", "pip", '--no-cache-dir', "install", f'--target={user_module}', package_name, '--no-deps']
+                    print('Run', ' '.join(cmd))
+                    subprocess.check_call(cmd)
 
             except Exception as e:
                 print(f'{package_name} install error: {e}')
@@ -134,12 +141,16 @@ def pip_install_and_import(dependencies):
             print(f'!!! module {module_name} still cannot be imported')
             return e
 
+
 """
-## addons
+## addons Paths
+
 # natives
-built_in_addons = os.path.join(bpy.utils.resource_path('LOCAL') , 'scripts', 'addons')
+built_in_addons = os.path.join(bpy.utils.resource_path('LOCAL') , path='scripts', 'addons')
+
 # users
-users_addons = bpy.utils.user_resource('SCRIPTS', 'addons')
+users_addons = bpy.utils.user_resource('SCRIPTS', path='addons')
+
 #external
 external_addons = None
 external_script_dir = bpy.context.preferences.filepaths.script_directory

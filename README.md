@@ -6,19 +6,22 @@ Blender addon - Tesselate texture plane
 ### [Demo Youtube](https://youtu.be/bCw7BN5J8Pk)
 
 
-/!\ IMPORTANT NOTES:
-- RUN BLENDER AS ADMIN might be needed at first activation to enable auto-installation of needed third party modules (tested on windows).
-- Not compatible with 2.93 and upper version yet due to python modules compatibility (max 2.92)
+### /!\ IMPORTANT NOTES:
 
-Triangulating can crash with some images and settings (stable in "contour only" mode), be sure to save before use.  
-If it crash on your image, try different settings.  
+  - **Running blender as admin** might be needed at first activation to enable auto-installation of needed third party modules (tested on windows)
+  - **save before use !** Triangulating can crash with some images and/or settings (stable in "contour only" mode).
+
+If it crash on your image, retry with different settings.  
 
 This addon need [opencv](https://pypi.org/project/opencv-python/) and [triangle](https://rufat.be/triangle/) modules
-At first activation, it will try to make an automatic download/installation.  
+At first activation, it will try to make an automatic download/installation of modules and their dependancies, if `modules` folder associated to your installation.  
 If this doesn't work, [go below to manual install](#-manual-installation-of-needed-module).  
 
+### Want to support my work ? check those links
 
-Want to support me? [Check out how](http://www.samuelbernou.fr/donate)
+- my [gumroad](https://pullusb.gumroad.com) store
+- my [blender market](https://blendermarket.com/creators/pullup) page
+- Other mean to support [here](http://www.samuelbernou.fr/donate)
 
 ---  
 
@@ -28,8 +31,8 @@ Automatically tesselate a opaque zone of a texture plane mesh.
 You can also just create the contour without tesselation.  
 The main purpose of the tesselation is to have a some vertices density in the mesh to be able to do "puppet" deformations with some rigging (similar to the puppet tool of After Effects).
 
-Exemple:  
-With _import image as plane_ addon, I imported this Ryu drawing image (found ramdomly on the web for test purpose).
+Example:  
+With _import image as plane_ addon, I imported this Ryu drawing image (found randomly on the web for test purpose).
 "contour only" option generate a mesh with stripped alpha,  
 otherwise it generate the same contour but fill it with internal triangles.
 
@@ -112,17 +115,26 @@ It sizes triangles as needed (usually smaller on the mesh boundary) resulting in
 **True Delaunay algo** : Use another algorithm for delaunay triangulation, conforming delaunay instead of constrained delaunay Triangle module settings. Results isn't so different, but this algorithm make sure voronoï cells are at center of each triangles (can force generation of super tiny tris by complying to this rule).  
 <!-- discarded :  incremental algo : Use incremental algorithm instead of divide-and-conquer (Triangle module settings)   -->
 
+### Additional notes
+
+- If there is any uv_project modifier in stack, those will be applied automatically before running
+- Any subdivision modifiers will be deleted before applying.
+
+### Where ?
+
+Panel in sidebar : 3D view > sidebar 'N' > Tool > Tex plane tesselation
+
 ## Credits
 
 The addon is heavily inspired by the original [Tesselate addon](https://github.com/LesFeesSpeciales/blender-rigging-scripts) within the rigging scripts released by "les fée spéciales" studio.  
 
 Here are the main differences:
-- 2.8
+
+- Compatible with Blender 2.8+/3.0+
 - use Opencv module instead of Scikit+Skyimage (still use Triangle for tesselation)
 - better handling of holes when there are nested shapes (might still not be perfect though).
 - expose a lot of options for tweaking (This also makes it a lot less stable...).
 - Support (slightly) deformed UVs
-
 
 ## Manual installation of needed module  
 
@@ -133,34 +145,22 @@ This means you ought to have the same python version installed and use _pip inst
 If you install through pip with `pip install opencv-python` and `pip install triangle`.  
 You should see the folders of the modules in the python installation directory.  
 In `<python_version>/lib/sites-packages`.  
-Now copy opencv and triangle to the Blender module folder. If you don't know we're your Blender modules folders are, look at. "Were are the scripts folder in Blender". (Or video "addons and script installation in Blender", version quick or long).  
+Now copy opencv and triangle to the Blender module folder. 
+If you don't know we're your Blender modules folders are, look at "Were are the scripts folder in Blender". (Or video "addons and script installation in Blender", version quick or long).  
 
 Opencv should have install some library dependency that you can see listed in console at pip install (make sure to copy them as well)
 
 About module installation :  
 If _triangle_ doesn't install properly with pip, follow [this tutorial on module installation by Damien Picard](http://lacuisine.tech/blog/2017/10/19/how-to-install-python-libs-in-blender-part-1/).
 
-
-### Where ?
-Panel in sidebar : 3D view > sidebar 'N' > Tool > Tex plane tesselation
-
-
-### Additional notes
-
-If there is any uv_project modifier in stack, those will be applied automatically before running _(maybe add a checkbox to choose to bypass...)_
-Any subdivision modifiers will be deleted before applying.
-
 ---
 
 ## Todo:
-- demo : make a demo
 
-- stability : problem... sometimes crash blender:  
-   - exception happen inside Triangle module when PSLG polygon is pased with certains settings or images, dont really know how to fix it...
+- stability : Sometimes crash blender:  
+  - exception happen inside Triangle module when PSLG polygon is passed with certains settings or images, dont know how to fix it...
 
-- puppet mode : make a planar snap bone creation tool to make a quick AE puppet style mode of rigging
-
-- add a pixel margin on image np.array (usefull when no alpha between borders). can be an option True by default
+<!-- - add a pixel margin on image np.array (usefull when no alpha between borders). can be an option True by default
    - This exists if the tesselate addon by les fées spéciale.
 
 - check if mesh faces are co-planar
@@ -179,30 +179,24 @@ Optional todo:
 
 - choose the texture source if multiple in shader ? (or ensure this is the one connected to surface)
 
-- add presets ?
-
-### TODO:
-
-<!-- - How to import modules in global variables fropm a loop
-
-```
-import importlib
-for mod, pack in DEPENDENCIES:
-    importlib.import_module(mod)
-``` -->
+- add presets ? -->
 
 
-### Change log:
+### Changelog
 
+2.0.0
 
-1.1.0:
+- compatible with blender 2.93 / 3.0.0 +
+- improved module auto-install
+
+1.1.0
 
 - modules auto-install using pip (tested only on windows)
 - UI: redo panel is now the same as sidebar UI  
 - Exposed disply wireframe in the UI
 - Added tracker URL infos
 
-1.0.2:
+1.0.2
 
 - Main version ready:
   - cv2 contour stable

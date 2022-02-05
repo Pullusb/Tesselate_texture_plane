@@ -22,10 +22,10 @@ bl_info = {
 "name": "Tesselate texture plane",
 "description": "Triangulate mesh on opaque area of selected texture planes",
 "author": "Samuel Bernou",
-"version": (1, 1, 0),
-"blender": (2, 80, 0),
+"version": (2, 0, 0),
+"blender": (2, 93, 0),
 "location": "3D view > right toolbar > Tesselate tex plane",
-"warning": "Stable in 'contour only' mode, but some tesselation settings crash Blender ! (Save before use)",
+"warning": "Stable in 'contour only' mode, tesselation can crash Blender ! (Save before use)",
 "wiki_url": "https://github.com/Pullusb/Tesselate_texture_plane",
 "tracker_url": "https://github.com/Pullusb/Tesselate_texture_plane/issues",
 "category": "3D View"
@@ -516,10 +516,10 @@ def tesselate(obj, contour_only=False, simplify=0.0010, pix_margin=2, min_angles
     
     prev_cnt_index = 0
 
-    t_approxshape = time()#Dbgt
-    for c, h in zip(contours, hierarchy[0]):#hierachy is a nested list
-        cnt = c[:,0]#remove the upper level in nested list for coords in array [[x, y]] -> [x,y]
-        np.append(cnt, cnt[0])#close shape
+    t_approxshape = time()
+    for c, h in zip(contours, hierarchy[0]): # hierachy is a nested list
+        cnt = c[:,0] # remove the upper level in nested list for coords in array [[x, y]] -> [x,y]
+        np.append(cnt, cnt[0]) # close shape
 
         is_hole = h[3] != -1# if it has a parent index then it's a hole (with RETR_CCOMP)
         # print('cnt : dtype', cnt.dtype, 'shape:', cnt.shape)#Dbg
@@ -533,7 +533,7 @@ def tesselate(obj, contour_only=False, simplify=0.0010, pix_margin=2, min_angles
         
 
         # Divide to get a 1x1 square. map between 0 and 1
-        cnt = cnt.astype(float)# convert polygons pixels coordinate to float so it can be mapped between 0,1
+        cnt = cnt.astype(float) # convert polygons pixels coordinate to float so it can be mapped between 0,1
         for axis in range(2):
             cnt[..., axis] /= float(alphaimg.shape[axis])
     
@@ -565,7 +565,7 @@ def tesselate(obj, contour_only=False, simplify=0.0010, pix_margin=2, min_angles
 
     print('approxshape: {:.3f}s'.format(time() - t_approxshape))#Dgbt
 
-    #kill unfilled keys in dic
+    ## kill unfilled keys in dic
     for k in ('holes', 'triangles', 'segments'):
         if not cnt_dic[k]:
             del cnt_dic[k]
@@ -625,7 +625,7 @@ def tesselate(obj, contour_only=False, simplify=0.0010, pix_margin=2, min_angles
         tri_opts += 'c'
 
 
-    t_triangulate = time()#Dbgt
+    t_triangulate = time()
     print('triangulate with opts:', tri_opts)
     
     # try:# Crash with access violation, try block useless
@@ -638,10 +638,10 @@ def tesselate(obj, contour_only=False, simplify=0.0010, pix_margin=2, min_angles
 
     print('points numbers:', len(res['vertices']))
 
-    if not 'segments' in res:
+    if not 'segments' in res.keys():
         print('no segments !'.upper())
 
-    if not 'triangles' in res:
+    if not 'triangles' in res.keys():
         print('no triangles !'.upper())
 
 
@@ -947,15 +947,15 @@ class TESS_props_group(PropertyGroup):
 ### --- PANELS 
 
 class TESS_PT_tesselate_UI(Panel):
-    bl_label = "Tex plane tesselation"# title
+    bl_label = "Tex plane tesselation"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
-    bl_category = "Tool"#name of the tab
-    bl_context = "objectmode"#only in object mode
+    bl_category = "Tool"
+    bl_context = "objectmode" # only in object mode
 
     @classmethod
     def poll(cls, context):
-        return context.object is not None# and context.mode == 'OBJECT'
+        return context.object is not None # and context.mode == 'OBJECT'
 
     def draw(self, context):
         layout = self.layout
@@ -995,10 +995,10 @@ class TESS_PT_subsettings_UI(Panel):
     bl_region_type = 'UI'
     bl_category = "Tool"
 
-    bl_label = "Triangle extra settings"# title
+    bl_label = "Triangle extra settings"
     bl_parent_id = "TESS_PT_tesselate_UI"
     bl_options = {'DEFAULT_CLOSED'}#, 'HIDE_HEADER' 
-    # bl_context = "objectmode"#only in object mode
+    # bl_context = "objectmode" # only in object mode
 
     @classmethod
     def poll(cls, context):
@@ -1011,7 +1011,7 @@ class TESS_PT_subsettings_UI(Panel):
         layout.prop(context.scene.ttp_props, "min_angles")
         layout.prop(context.scene.ttp_props, "gift_wrap")
         layout.prop(context.scene.ttp_props, "true_delaunay")
-        # layout.prop(context.scene.ttp_props, "algo_inc")#No need...
+        # layout.prop(context.scene.ttp_props, "algo_inc") # No need...
         # Maybe add a show wire option ?
 
 ### --- REGISTER ---
@@ -1021,10 +1021,6 @@ TESS_OT_tesselate_plane,
 TESS_PT_tesselate_UI,
 TESS_PT_subsettings_UI,
 )
-
-# register, unregister = bpy.utils.register_classes_factory(classes)
-# if __name__ == "__main__":
-#     register()
 
 def register():
     from bpy.utils import register_class
@@ -1039,12 +1035,11 @@ def register():
 def unregister():
     from bpy.utils import unregister_class
 
-
     unregister_class(TESS_props_group)
     for cls in reversed(classes):
         unregister_class(cls)
-    del bpy.types.Scene.ttp_props 
 
+    del bpy.types.Scene.ttp_props 
 
 if __name__ == "__main__":
     register()

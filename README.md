@@ -184,10 +184,14 @@ Optional todo:
 
 ### Changelog
 
+2.0.1
+
+- ui: Always show panel, display help text when no object is selected
+
 2.0.0
 
-- compatible with blender 2.93 / 3.0.0 +
-- improved module auto-install
+- fix: compatible with blender 2.93 / 3.0.0 +
+- fix: improved module auto-install
 
 1.1.0
 

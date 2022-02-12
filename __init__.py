@@ -22,7 +22,7 @@ bl_info = {
 "name": "Tesselate texture plane",
 "description": "Triangulate mesh on opaque area of selected texture planes",
 "author": "Samuel Bernou",
-"version": (2, 0, 0),
+"version": (2, 0, 1),
 "blender": (2, 93, 0),
 "location": "3D view > right toolbar > Tesselate tex plane",
 "warning": "Stable in 'contour only' mode, tesselation can crash Blender ! (Save before use)",
@@ -953,12 +953,16 @@ class TESS_PT_tesselate_UI(Panel):
     bl_category = "Tool"
     bl_context = "objectmode" # only in object mode
 
-    @classmethod
-    def poll(cls, context):
-        return context.object is not None # and context.mode == 'OBJECT'
+    # @classmethod
+    # def poll(cls, context):
+    #     return context.object is not None # and context.mode == 'OBJECT'
 
     def draw(self, context):
         layout = self.layout
+        if context.object is None:
+            layout.label(text='Select textured plane(s)')
+            return
+
         layout.use_property_split = True
 
         layout.prop(context.object, 'show_wire')

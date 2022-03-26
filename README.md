@@ -184,6 +184,10 @@ Optional todo:
 
 ### Changelog
 
+2.0.2
+
+- added: print debug step documentation when enabling the addon with problem with modules.
+
 2.0.1
 
 - ui: Always show panel, display help text when no object is selected

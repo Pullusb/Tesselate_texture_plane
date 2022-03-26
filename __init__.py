@@ -22,7 +22,7 @@ bl_info = {
 "name": "Tesselate texture plane",
 "description": "Triangulate mesh on opaque area of selected texture planes",
 "author": "Samuel Bernou",
-"version": (2, 0, 1),
+"version": (2, 0, 2),
 "blender": (2, 93, 0),
 "location": "3D view > right toolbar > Tesselate tex plane",
 "warning": "Stable in 'contour only' mode, tesselation can crash Blender ! (Save before use)",
@@ -37,6 +37,7 @@ import numpy as np
 import bmesh
 from mathutils import Vector, Matrix
 from time import time
+from pathlib import Path
 
 ## module auto-install
 ## module_name, package_name
@@ -47,9 +48,23 @@ DEPENDENCIES = {
 
 from . import auto_modules
 
+modules_loc = Path(__file__).parents[1] / 'modules' # bpy.utils.user_resource('SCRIPTS', path='modules')
+error_message = f'''--- Cannot import modules (see console).
+Try following solutions:
+1. Try enabling addon after restarting blender as admin
+2. If error is still there, try deleteting currently installed modules:
+  - go to modules folder. Should be: {modules_loc}
+  - delete folders "triangle", "cv2", "triangle...dist-infos", "opencv...dist-infos"
+  - Try enabling the addon again to auto-install modules associated with this version of blender (preferably started as admin)
+---
+'''
+
 error = auto_modules.pip_install_and_import(DEPENDENCIES)
+
+# note: an internet connexion is needed to auto-install needed modules)
+
 if error:
-    raise Exception('Cannot import modules (see console). Try restarting blender as admin') from error
+    raise Exception(error_message) from error
 
 import cv2
 import triangle # triangle doc >> https://rufat.be/triangle/API.html

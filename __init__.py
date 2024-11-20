@@ -22,8 +22,8 @@ bl_info = {
 "name": "Tesselate texture plane",
 "description": "Triangulate mesh on opaque area of selected texture planes",
 "author": "Samuel Bernou",
-"version": (2, 0, 2),
-"blender": (2, 93, 0),
+"version": (3, 0, 0),
+"blender": (4, 0, 0),
 "location": "3D view > right toolbar > Tesselate tex plane",
 "warning": "Stable in 'contour only' mode, tesselation can crash Blender ! (Save before use)",
 "wiki_url": "https://github.com/Pullusb/Tesselate_texture_plane",
@@ -45,7 +45,7 @@ DEPENDENCIES = {
     ('cv2', 'opencv-python'),# opencv-contrib-python
     ('triangle', 'triangle'),
 }
-
+# FIXME -> can't install cv2 and fail after first triangle install... (check chsh module install)
 from . import auto_modules
 
 modules_loc = Path(__file__).parents[1] / 'modules' # bpy.utils.user_resource('SCRIPTS', path='modules')

@@ -101,13 +101,17 @@ def pip_install_and_import(dependencies):
                 
                 done = False
                 
+                in_external = False
+                external_scripts = None
+                for script_dir_item in bpy.context.preferences.filepaths.script_directories:
+                    in_external = str(Path(__file__)).startswith(str(Path(script_dir_item.directory)))
+                    if in_external:
+                        print(f'addon in {script_dir_item.name}')
+                        external_scripts = script_dir_item.directory
+                        break
+
                 ## within external modules (if script files are there)
-                external_scripts = bpy.context.preferences.filepaths.script_directory
-                print('external_scripts: ', external_scripts)
-                print('__file__: ', __file__)
-                in_external = str(Path(__file__)).startswith(str(Path(external_scripts)))
-                
-                if external_scripts and len(external_scripts) > 2 and in_external:
+                if in_external and len(external_scripts) > 2:
                     external_scripts = Path(external_scripts)
                     if external_scripts.exists():
                         external_modules = external_scripts / 'modules'
@@ -140,21 +144,3 @@ def pip_install_and_import(dependencies):
         except ImportError as e:
             print(f'!!! module {module_name} still cannot be imported')
             return e
-
-
-"""
-## addons Paths
-
-# natives
-built_in_addons = os.path.join(bpy.utils.resource_path('LOCAL') , path='scripts', 'addons')
-
-# users
-users_addons = bpy.utils.user_resource('SCRIPTS', path='addons')
-
-#external
-external_addons = None
-external_script_dir = bpy.context.preferences.filepaths.script_directory
-if external_script_dir and len(external_script_dir) > 2:
-    external_addons = os.path.join(external_script_dir, 'addons')
-"""
-            

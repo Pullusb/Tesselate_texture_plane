@@ -1,31 +1,13 @@
-# Copyright (C) 2020 Samuel Bernou
-# bernou.samuel@gmail.com
-
-# # ##### BEGIN GPL LICENSE BLOCK #####
-#
-#  This program is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ##### END GPL LICENSE BLOCK #####
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 bl_info = {
 "name": "Tesselate texture plane",
-"description": "Triangulate mesh on opaque area of selected texture planes",
+"description": "Cut or triangulate selected textured mesh planes on opaque areas",
 "author": "Samuel Bernou",
-"version": (3, 0, 0),
+"version": (3, 1, 0),
 "blender": (4, 0, 0),
 "location": "3D view > right toolbar > Tesselate tex plane",
-"warning": "Stable in 'contour only' mode, tesselation can crash Blender ! (Save before use)",
+"warning": "Tesselate mode can crash (Save before use). 'Contour only' mode stable",
 "wiki_url": "https://github.com/Pullusb/Tesselate_texture_plane",
 "tracker_url": "https://github.com/Pullusb/Tesselate_texture_plane/issues",
 "category": "3D View"
@@ -45,29 +27,27 @@ DEPENDENCIES = {
     ('cv2', 'opencv-python'),# opencv-contrib-python
     ('triangle', 'triangle'),
 }
-# FIXME -> can't install cv2 and fail after first triangle install... (check chsh module install)
-from . import auto_modules
 
-modules_loc = Path(__file__).parents[1] / 'modules' # bpy.utils.user_resource('SCRIPTS', path='modules')
-error_message = f'''--- Cannot import modules (see console).
-Try following solutions:
-1. Try enabling addon after restarting blender as admin
-2. If error is still there, try deleteting currently installed modules:
-  - go to modules folder. Should be: {modules_loc}
-  - delete folders "triangle", "cv2", "triangle...dist-infos", "opencv...dist-infos"
-  - Try enabling the addon again to auto-install modules associated with this version of blender (preferably started as admin)
----
-'''
+def module_can_be_imported(name):
+    try:
+        __import__(name)
+        return True
+    except ImportError:
+        return False
 
-error = auto_modules.pip_install_and_import(DEPENDENCIES)
+# Function to check which dependencies are missing
+def get_missing_dependencies():
+    return [module for module, _ in DEPENDENCIES if not module_can_be_imported(module)]
 
-# note: an internet connexion is needed to auto-install needed modules)
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
-if error:
-    raise Exception(error_message) from error
-
-import cv2
-import triangle # triangle doc >> https://rufat.be/triangle/API.html
+try:
+    import triangle # triangle doc >> https://rufat.be/triangle/API.html
+except ImportError:
+    triangle = None
 
 ## addon basic import shortcuts for class types and props
 from bpy.props import (IntProperty,
@@ -106,7 +86,7 @@ def debug_display_img(img, img_name, width, height, base_one=True):
     if not base_one:#if image is base 255
         img = img / 255
     ravelled = img.ravel()
-    blimg.pixels = ravelled#Loooooooong !
+    blimg.pixels = ravelled #Loooooooong !
     print(f'pixel2img time : {time() - start} secs')
 
 def back_to_tex_node(n):
@@ -644,7 +624,7 @@ def tesselate(obj, contour_only=False, simplify=0.0010, pix_margin=2, min_angles
     print('triangulate with opts:', tri_opts)
     
     # try:# Crash with access violation, try block useless
-    res = triangle.triangulate(cnt_dic, opts=tri_opts) #opts='piqa0.0005') #'segments':cnt (force this segement to be use)
+    res = triangle.triangulate(cnt_dic, opts=tri_opts) #opts='piqa0.0005') #'segments':cnt (force this segment to be use)
     # except Exception as e:
     #     print('triangulation has failed on object')
     #     return
@@ -754,6 +734,15 @@ class TESS_OT_tesselate_plane(Operator):
 
 
     def execute(self, context):
+        ## Pre-flight check: Raise error if Triangle is missing and contour_only is not enabled
+        triangle_missing = not module_can_be_imported('triangle')
+        
+        if triangle_missing and not self.contour_only:
+            self.report({'ERROR'}, 
+                       "Triangle module is required for tesselation mode. "
+                       "Please enable 'Contour only' mode or install Triangle from addon preferences.")
+            return {'CANCELLED'}
+
         #map/translate values from human readable to triangle and opencv value
         # Value = self.Value if self.Value == 0 else transfer_value(self.Value, OldMin, OldMax, NewMin, NewMax)
         
@@ -974,20 +963,48 @@ class TESS_PT_tesselate_UI(Panel):
 
     def draw(self, context):
         layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        # Check for missing core dependencies (cv2 is required for all modes)
+        if not module_can_be_imported('cv2'):
+            layout.label(text="OpenCV required for basic functionality:", icon="ERROR")
+            layout.label(text="cv2 module missing")
+            layout.operator("preferences.addon_show", text="Open Preferences to Install", icon='PREFERENCES').module = __package__
+            return
+        
+        # Triangle only needed for full tesselation
+        triangle_missing = not module_can_be_imported('triangle')
+        
         if context.object is None:
             layout.label(text='Select textured plane(s)')
             return
 
-        layout.use_property_split = True
+        if context.object is None:
+            layout.label(text='Select textured plane(s)')
+            return
 
         layout.prop(context.object, 'show_wire')
+
+        # If triangle is missing, show a notice but allow contour_only mode
+        if triangle_missing:
+            layout.label(text="Triangle module not installed:", icon="INFO")
+            layout.operator("preferences.addon_show", text="Open Preferences to Install", icon='PREFERENCES').module = __package__
+            # layout.label(text="'Contour only' method available")
+
         row = layout.row()
-        row.operator("mesh.tesselate_plane")
+
+        text = "Cut Texture Plane" if context.scene.ttp_props.contour_only else "Tesselate Texture Plane"
+        row.operator("mesh.tesselate_plane", text=text, icon='MOD_TRIANGULATE')
 
         col = layout.column()
-        
 
+        # Show contour_only property
         col.prop(context.scene.ttp_props, "contour_only")
+        # If triangle is missing, show a note
+        if triangle_missing and not context.scene.ttp_props.contour_only:
+            col.label(text="(Triangle missing : Required)", icon="INFO")
+            col.separator()
 
         col.prop(context.scene.ttp_props, "simplify")
         
@@ -1033,32 +1050,118 @@ class TESS_PT_subsettings_UI(Panel):
         # layout.prop(context.scene.ttp_props, "algo_inc") # No need...
         # Maybe add a show wire option ?
 
+class TTP_AddonPreferences(AddonPreferences):
+    bl_idname = __package__
+    
+    def draw(self, context):
+        layout = self.layout
+        
+        layout.label(text="Required Dependencies:")
+        
+        box = layout.box()
+        col = box.column()
+        
+        # Check OpenCV (required for all functionality)
+        row = col.row()
+        has_cv2 = module_can_be_imported('cv2')
+        if has_cv2:
+            row.label(text="OpenCV (cv2): Installed", icon="CHECKMARK")
+        else:
+            row.label(text="OpenCV (cv2): Not Installed (Required for all modes)", icon="ERROR")
+            row.operator("ttp.install_module", text="Install cv2").package_name = "opencv-python"
+        
+        # Check Triangle (required for full tesselation)
+        row = col.row()
+        has_triangle = module_can_be_imported('triangle')
+        if has_triangle:
+            row.label(text="Triangle: Installed", icon="CHECKMARK")
+        else:
+            row.label(text="Triangle: Not Installed (Required for tesselation mode)", icon="INFO")
+            row.operator("ttp.install_module", text="Install triangle").package_name = "triangle"
+            col.separator()
+            col.label(text="A Blender restart is required after modules installation", icon="INFO")
+
+        # Show available modes
+        col.separator()
+        col.label(text="Status:")
+        if has_cv2 and has_triangle:
+            col.label(text="All modules OK", icon="CHECKMARK")
+        elif has_cv2:
+            col.label(text="Limited functionality: Only 'Contour only' mode available", icon="ERROR")
+        else:
+            col.label(text="No functionality available: Install at least OpenCV", icon="CANCEL")
+
+        # Help text
+        layout.separator()
+        col = layout.column()
+        col.label(text="If installation fails, try running Blender as administrator")
+        col.label(text="or install packages manually into your Blender modules folder:")
+        col.label(text=str(Path(bpy.utils.user_resource('SCRIPTS', path='modules'))))
+
+
+"""Manual Installation instructions
+Try following solutions:
+1. Try enabling addon after restarting blender as admin
+2. If error is still there, try deleteting currently installed modules:
+  - go to modules folder. Should be: {modules_loc}
+  - delete folders "triangle", "cv2", "triangle...dist-infos", "opencv...dist-infos"
+  - Try enabling the addon again to auto-install modules associated with this version of blender (preferably started as admin)
+"""
+
+
+class TTP_OT_InstallModule(Operator):
+    bl_idname = "ttp.install_module"
+    bl_label = "Install Module"
+    bl_description = "Install the required module"
+    
+    package_name: StringProperty(
+        name="Package Name",
+        description="Name of the package to install"
+    )
+    
+    def execute(self, context):
+        import subprocess
+        import sys
+        try:
+            # Get the user modules path and create it if needed
+            user_modules = Path(bpy.utils.user_resource('SCRIPTS', path='modules', create=True))
+            
+            # Use subprocess to install the package
+            python_exe = Path(sys.executable)
+            cmd = [str(python_exe), "-m", "pip",  "--no-cache-dir", "install", 
+                   f"--target={user_modules}", self.package_name, "--no-deps"]
+
+            self.report({'INFO'}, f"Installing {self.package_name}...")
+            
+            # Run the installation command
+            subprocess.check_call(cmd)
+            
+            self.report({'INFO'}, f"Successfully installed {self.package_name}")
+            return {'FINISHED'}
+        
+        except Exception as e:
+            self.report({'ERROR'}, f"Installation failed: {str(e)}")
+            return {'CANCELLED'}
+
 ### --- REGISTER ---
 
 classes = (
-TESS_OT_tesselate_plane,
-TESS_PT_tesselate_UI,
-TESS_PT_subsettings_UI,
+    TESS_props_group,
+    TESS_OT_tesselate_plane,
+    TESS_PT_tesselate_UI,
+    TESS_PT_subsettings_UI,
+    TTP_AddonPreferences,
+    TTP_OT_InstallModule,
 )
 
 def register():
-    from bpy.utils import register_class
-    
-    register_class(TESS_props_group)
-    bpy.types.Scene.ttp_props = PointerProperty(type=TESS_props_group)
-    
     for cls in classes:
-        register_class(cls)
+        bpy.utils.register_class(cls)
     
+    bpy.types.Scene.ttp_props = PointerProperty(type=TESS_props_group)
 
 def unregister():
-    from bpy.utils import unregister_class
-
-    unregister_class(TESS_props_group)
+    del bpy.types.Scene.ttp_props
+    
     for cls in reversed(classes):
-        unregister_class(cls)
-
-    del bpy.types.Scene.ttp_props 
-
-if __name__ == "__main__":
-    register()
+        bpy.utils.unregister_class(cls)

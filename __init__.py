@@ -2,7 +2,7 @@
 
 bl_info = {
 "name": "Tesselate texture plane",
-"description": "Cut or triangulate selected textured mesh planes on opaque areas",
+"description": "Triangulate or cut selected textured mesh planes on opaque areas",
 "author": "Samuel Bernou",
 "version": (3, 1, 0),
 "blender": (4, 0, 0),
@@ -21,10 +21,8 @@ from mathutils import Vector, Matrix
 from time import time
 from pathlib import Path
 
-## module auto-install
-## module_name, package_name
 DEPENDENCIES = {
-    ('cv2', 'opencv-python'),# opencv-contrib-python
+    ('cv2', 'opencv-python'), # opencv-contrib-python
     ('triangle', 'triangle'),
 }
 
